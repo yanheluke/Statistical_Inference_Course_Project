@@ -1,0 +1,143 @@
+---
+title: 'Part 2: Basic Inferential Data Analysis Instructions'
+author: "Yan He"
+date: "2018/8/18"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+Now we want to analysis the ToothGrowth datasets in R which response is the length of odontoblasts in 60 guinea pigs. Each animal received one of three dose levels of vitamin C (0.5, 1, and 2 mg/day) by one of two delivery methods, orange juice or ascorbic acid (a form of vitamin C and coded as VC).
+
+First we load the data and summarise the original data:
+
+```{r load packages, echo=FALSE}
+
+library(datasets)
+library(Hmisc)
+```
+
+```{r summary, echo = TRUE}
+## Using describe() function in Hmisc to get descriptive statistics
+
+data(ToothGrowth)
+
+describe(ToothGrowth)
+
+```
+
+It's obvious that the dataseta has three variables: tooth length, supplement type and dose. Because dose variable has only three unique values, we choose to change it to factor variable:
+
+```{r class convert}
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+class(ToothGrowth$dose)
+```
+
+Now we can use ggplot package to get some useful plots:
+
+```{r plots1}
+library(ggplot2)
+
+p <- ggplot(data = ToothGrowth, aes(x = supp, y = len, fill = supp)) + 
+        geom_boxplot() + 
+        ggtitle('the Different Tooth Length of Supplement Type')
+p
+
+q <- ggplot(data = ToothGrowth, aes(x = supp, y = len, fill = supp))+ 
+        geom_boxplot() + 
+        facet_grid(.~dose) + 
+        ggtitle('the Different Tooth Length of Supplement Type in Three Dose Group')
+q
+
+
+```
+
+The plot shows that supplement types has different effect on tooth growth. OJ has higher effect than VC.
+
+```{r plot2}
+p <- ggplot(data = ToothGrowth, aes(x = dose, y = len, fill = dose)) + 
+        geom_boxplot() + 
+        ggtitle('the Different Tooth Length of Dose in Milligrams/Day')
+p
+
+q <- ggplot(data = ToothGrowth, aes(x = dose, y = len, fill = dose)) + 
+        geom_boxplot() + 
+        facet_grid(.~supp) + 
+        ggtitle('the Different Tooth Length of Dose in Milligrams/Day in Two Supplement Group')
+
+q
+```
+
+The plot shows that different doses in milligrams/day have different influnce on tooth growth.
+
+## Hypothesis Test
+
+Now we will use hypothesis test for our guesses. The samples of each group is less than 30 which means it's will be a small sample test, so we will use T-test rather than Z-test for our hypothesis tests.
+
+### Test for Supplement 
+
+```{r t-test, echo=FALSE}
+with(ToothGrowth, {
+        t.test(len~supp, alternative = 'two.sided', paired = FALSE)
+})
+```
+
+From the T-test we can see that  p value is greater than 0.05 (which means no significant) so we can't reject the null hypothesis that the two supp groups have no difference.
+
+### Test for dose
+The dose variable has three levels so the traditional two sample t-test is not suitable for our job. However, we can develope three methods to solve this problem.
+
+1.using t-test for two of three levels and repeat;
+2.using ANOVA method to analysis the paired data;
+3.using nonparametric test;
+
+#### t-test
+
+**dose 0.5 and 1**
+
+```{r t-test for dose 1, echo = TRUE}
+sub_data_1 <- subset(ToothGrowth, dose %in% c(0.5, 1))
+dose_1 <- sub_data_1$dose
+len <- sub_data_1$len
+t.test(len~dose_1, alternative = 'two.sided', paired = FALSE)
+```
+
+The p-value is smaller than 0.05 so we can reject the null hypothesis and make sure that dose 0.5 ans 1 group has significant difference.
+
+**dose 1 and 2**
+
+```{r t-test for dose 2, echo = TRUE}
+sub_data_2 <- subset(ToothGrowth, dose %in% c(1,2))
+dose_2 <- sub_data_2$dose
+len <- sub_data_2$len
+t.test(len~dose_2, alternative = 'two.sided', paired = FALSE)
+```
+
+**dose 0.5 and 2**
+
+```{r t-test for dose 3, echo = TRUE}
+sub_data_3 <- subset(ToothGrowth, dose %in% c(0.5, 2))
+dose_3 <- sub_data_3$dose
+len <- sub_data_3$len
+t.test(len~dose_3, alternative = 'two.sided', paired = FALSE)
+```
+
+From above tests we can find that three p-value is smaller than 0.05 so we can reject the null hypothesis and make sure that every dose group has significant difference.
+
+#### nonparamtetric test
+Now we use Kruskal-Wallis test for our propose to analysis the difference of three dose groups.
+```{r kw test, echo = TRUE}
+kruskal.test(len~dose, data = ToothGrowth)
+```
+
+The p value is so small that we can reject the null hypothesis. The result is same with t-test.
+
+## Conclusions
+
+From our analysis, we can make two conclusions of the ToothGrowth dataset. First, there is significant difference of teeth length and dose levels. Second, althrough we offer two supplement types, it's no significant difference of teeth length and supp.
